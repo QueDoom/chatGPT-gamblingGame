@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slot Machine Game</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Ctext x='0' y='40' font-family='Arial' font-size='40' fill='black'%3E🎰%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #2c3e50;
+      color: #ecf0f1;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      cursor: pointer; /* Ensure the cursor is always an arrow */
+    }
+    .slot-machine {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .reel {
+      display: inline-block;
+      width: 120px;
+      height: 120px;
+      margin: 0 15px;
+      font-size: 70px; /* Increased the size for better visibility */
+      background-color: #34495e;
+      line-height: 120px;
+      border: 3px solid #16a085;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    .reel span {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls {
+      margin-top: 30px;
+    }
+    .btn {
+      font-size: 22px;
+      padding: 15px 30px;
+      margin: 15px;
+      background-color: #16a085;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    .btn:disabled {
+      background-color: #7f8c8d;
+      cursor: not-allowed;
+    }
+    .message {
+      margin-top: 20px;
+      font-size: 28px;
+      color: #e74c3c;
+    }
+    .rain-icon {
+      position: absolute;
+      font-size: 50px;
+      animation: fall 7s linear forwards;
+      user-select: none; /* Prevent selection of icons */
+    }
+    @keyframes fall {
+      0% {
+        top: -60px; /* Start above the screen */
+        opacity: 1;
+      }
+      60% {
+        opacity: 0.6; /* Fade out quicker */
+      }
+      100% {
+        top: 100vh; /* Fall to the bottom */
+        opacity: 0; /* Fully fade out at the end */
+      }
+    }
+    #triggerJackpot {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      font-size: 18px;
+      padding: 10px 20px;
+      background-color: #2c3e50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      visibility: visible; /* Ensure button is clickable */
+    }
+    #triggerJackpot:hover {
+      background-color: #2c3e50;
+    }
+    #triggerJackpot span {
+      visibility: hidden; /* Hide the text inside */
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Virtual Slot Machine</h1>
+
+  <div class="slot-machine">
+    <div id="reel1" class="reel"><span>?</span></div>
+    <div id="reel2" class="reel"><span>?</span></div>
+    <div id="reel3" class="reel"><span>?</span></div>
+  </div>
+
+  <div class="controls">
+    <button id="spinButton" class="btn" onclick="spin()">Spin</button>
+  </div>
+
+  <div id="balance">Balance: $100</div>
+  <div class="message" id="message"></div>
+
+  <!-- Trigger Jackpot Button -->
+  <button id="triggerJackpot" onclick="startRainEffect(randomRainIcon())">
+    <span>Trigger Jackpot</span>
+  </button>
+
+  <script>
+    let balance = 100;
+    const reelSymbols = ["🍒", "🍋", "🍇", "🍊", "⭐", "🔔", "7️⃣", "🍫", "💎"];
+    const reelElements = [
+      document.getElementById("reel1"),
+      document.getElementById("reel2"),
+      document.getElementById("reel3")
+    ];
+
+    function getRandomSymbol() {
+      return reelSymbols[Math.floor(Math.random() * reelSymbols.length)];
+    }
+
+    function spin() {
+      if (balance <= 0) {
+        document.getElementById("message").innerText = "You are out of money!";
+        document.getElementById("spinButton").innerText = "Reset";
+        document.getElementById("spinButton").onclick = reset;
+        return;
+      }
+
+      // Disable the spin button to prevent multiple clicks
+      document.getElementById("spinButton").disabled = true;
+
+      balance -= 10; // Deduct cost to spin
+      updateBalance();
+      document.getElementById("message").innerText = "Spinning...";
+
+      // Shuffle symbols faster (100ms) and repeat 10 times
+      let shuffleCount = 10;
+      let shuffleInterval = setInterval(() => {
+        reelElements.forEach(reel => {
+          reel.querySelector("span").innerText = getRandomSymbol();
+        });
+        shuffleCount--;
+
+        if (shuffleCount <= 0) {
+          clearInterval(shuffleInterval);
+          showFinalSymbols();
+          document.getElementById("spinButton").disabled = false;
+        }
+      }, 100); // Change every 100ms for faster shuffling
+    }
+
+    function showFinalSymbols() {
+      // Get final symbols for each reel
+      const finalSymbols = reelElements.map(reel => {
+        const symbol = getRandomSymbol();
+        reel.querySelector("span").innerText = symbol;
+        return symbol;
+      });
+
+      const reel1 = finalSymbols[0];
+      const reel2 = finalSymbols[1];
+      const reel3 = finalSymbols[2];
+
+      let prize = 0;
+      // Check for three matching symbols (Jackpot)
+      if (reel1 === reel2 && reel2 === reel3) {
+        if (reel1 === "💎") {
+          prize = 200;
+        } else if (reel1 === "⭐") {
+          prize = 100;
+        } else {
+          prize = 50;
+        }
+        document.getElementById("message").innerText = `Jackpot! You won $${prize}!`;
+        startRainEffect(reel1); // Start rain effect with the jackpot icon
+      }
+      // Check for two matching symbols and award $10 for "Payback"
+      else if (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
+        prize = 10;
+        document.getElementById("message").innerText = "Payback!";
+      }
+      // No matches
+      else {
+        document.getElementById("message").innerText = "Try again!";
+      }
+
+      balance += prize;
+      updateBalance();
+    }
+
+    function updateBalance() {
+      document.getElementById("balance").innerText = `Balance: $${balance}`;
+    }
+
+    function reset() {
+      balance = 100;
+      document.getElementById("reel1").querySelector("span").innerText = "?";
+      document.getElementById("reel2").querySelector("span").innerText = "?";
+      document.getElementById("reel3").querySelector("span").innerText = "?";
+      document.getElementById("message").innerText = "";
+      updateBalance();
+
+      // Reset the button to "Spin"
+      document.getElementById("spinButton").innerText = "Spin";
+      document.getElementById("spinButton").onclick = spin;
+    }
+
+    function startRainEffect(icon) {
+      // Create 20 falling icons with random delays
+      let totalIcons = 0; // To count how many icons are in the process of falling
+      let icons = []; // Store the rain icons to check when to remove them
+
+      for (let i = 0; i < 20; i++) {
+        const rainIcon = document.createElement("div");
+        rainIcon.classList.add("rain-icon");
+        rainIcon.innerText = icon;
+
+        // Set random horizontal position off-screen
+        rainIcon.style.left = Math.random() * 100 + "vw"; // Random horizontal position
+        rainIcon.style.top = -60 + "px"; // Start above the screen
+
+        rainIcon.style.animationDelay = Math.random() * 2 + "s"; // Random delay between 0 to 2 seconds
+
+        document.body.appendChild(rainIcon);
+        icons.push(rainIcon);
+        totalIcons++;
+
+        rainIcon.addEventListener("animationend", function () {
+          rainIcon.style.visibility = "hidden"; // Hide icon when it's faded out
+          totalIcons--;
+
+          // Remove icons when all are translucent
+          if (totalIcons === 0) {
+            icons.forEach(icon => icon.remove());
+          }
+        });
+      }
+    }
+
+    // Function to randomize rain icon
+    function randomRainIcon() {
+      return reelSymbols[Math.floor(Math.random() * reelSymbols.length)];
+    }
+  </script>
+
+</body>
+</html>
